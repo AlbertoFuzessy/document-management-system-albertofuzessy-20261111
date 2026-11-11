@@ -47,12 +47,14 @@ A primeira versão é de usuário local único, sem autenticação. O backend ob
 | RNF-01 | Os arquivos são gravados exclusivamente no filesystem local em `backend/storage`, por meio de Multer `diskStorage`. Não usar armazenamento externo. |
 | RNF-02 | Os metadados são mantidos em memória nesta fase; reiniciar o processo remove o catálogo, embora os arquivos existentes possam permanecer no diretório local. |
 | RNF-03 | Configurações operacionais são obtidas por variáveis de ambiente, seguindo o princípio 12-Factor. |
-| RNF-04 | O limite máximo do arquivo é configurado por `UPLOAD_MAX_SIZE_BYTES`; a implementação deve definir e documentar um valor padrão antes de entrar em execução. |
-| RNF-05 | Tipos MIME aceitos podem ser limitados por `UPLOAD_ALLOWED_MIME_TYPES`, uma lista separada por vírgulas. A política e os valores padrão devem ser decididos antes da implementação; a validação de MIME não substitui medidas de segurança no consumo dos arquivos. |
-| RNF-06 | A aplicação deve garantir a existência do diretório de armazenamento na inicialização ou tratar claramente sua indisponibilidade, sem iniciar upload com configuração inválida. |
-| RNF-07 | Caminhos locais, nomes internos, stack traces e detalhes do sistema de arquivos não são expostos em respostas HTTP. |
-| RNF-08 | A API retorna respostas JSON consistentes para erros e usa códigos HTTP compatíveis com o resultado da operação. |
-| RNF-09 | O código segue JavaScript sem TypeScript nesta fase, CommonJS no backend, ESM no frontend e os padrões simples de Clean Architecture definidos neste documento. |
+| RNF-04 | O limite máximo do arquivo é configurado por `UPLOAD_MAX_SIZE_BYTES`, com padrão de 10 MiB (10.485.760 bytes). |
+| RNF-05 | Tipos MIME podem ser limitados por `UPLOAD_ALLOWED_MIME_TYPES`, uma lista separada por vírgulas. O filtro compara o MIME declarado pelo cliente e não verifica assinatura do conteúdo; downloads devem ser servidos como anexo binário, sem renderização inline. |
+| RNF-06 | O backend deve ser acessível somente pela interface local nesta fase, ouvindo em `127.0.0.1`; não há autenticação nem isolamento multiusuário. |
+| RNF-07 | Cada dono local pode armazenar até `DMS_MAX_STORAGE_BYTES` e registrar até `DMS_MAX_DOCUMENTS_PER_OWNER` documentos por processo; uploads além desses limites são rejeitados. |
+| RNF-08 | A aplicação deve garantir a existência do diretório de armazenamento na inicialização ou tratar claramente sua indisponibilidade, sem iniciar upload com configuração inválida. |
+| RNF-09 | Caminhos locais, nomes internos, stack traces e detalhes do sistema de arquivos não são expostos em respostas HTTP. |
+| RNF-10 | A API retorna respostas JSON consistentes para erros e usa códigos HTTP compatíveis com o resultado da operação. |
+| RNF-11 | O código segue JavaScript sem TypeScript nesta fase, CommonJS no backend, ESM no frontend e os padrões simples de Clean Architecture definidos neste documento. |
 
 ### Configuração
 
@@ -61,8 +63,10 @@ A primeira versão é de usuário local único, sem autenticação. O backend ob
 | `PORT` | Porta HTTP do backend | Usar o valor configurado; definir um padrão no ambiente de desenvolvimento. |
 | `STORAGE_DIR` | Diretório local de arquivos | Padrão `backend/storage`; não aceitar destino de armazenamento externo. |
 | `DMS_OWNER_ID` | Identificador local do dono | Padrão `local-user`; não representa uma credencial. |
-| `UPLOAD_MAX_SIZE_BYTES` | Tamanho máximo por arquivo | Obrigatória para a política de produção ou fornecer padrão explicitamente documentado. |
-| `UPLOAD_ALLOWED_MIME_TYPES` | Lista opcional de MIME types permitidos | Configuração separada por vírgulas; comportamento sem valor deve ser definido antes da implementação. |
+| `UPLOAD_MAX_SIZE_BYTES` | Tamanho máximo por arquivo | Padrão `10485760` (10 MiB); deve ser um inteiro positivo. |
+| `UPLOAD_ALLOWED_MIME_TYPES` | Lista opcional de MIME types permitidos | Configuração separada por vírgulas; vazia ou ausente permite qualquer tipo MIME. |
+| `DMS_MAX_STORAGE_BYTES` | Quota de bytes de documentos por dono local | Padrão `104857600` (100 MiB), contabilizado pelo catálogo em memória. |
+| `DMS_MAX_DOCUMENTS_PER_OWNER` | Quantidade máxima de registros por dono local | Padrão `1000`, contabilizado pelo catálogo em memória. |
 
 ## 5. Modelo de dados
 
@@ -187,6 +191,8 @@ A mensagem pode ser exibida ao usuário; detalhes internos não devem ser inclu�
 - Não adicionar banco de dados, armazenamento externo ou serviço de upload de terceiros.
 - A remoção manual ou perda de arquivos não é reconciliada automaticamente com o catálogo nesta versão.
 - Como não há autenticação, o identificador `owner` e o filtro por dono não oferecem segurança multiusuário.
+- O backend escuta apenas em `127.0.0.1`; expô-lo em rede exige autenticação e autorização antes de alterar esse limite.
+- As quotas são por processo e não contabilizam arquivos órfãos deixados no disco após reiniciar o backend; a capacidade total do filesystem ainda deve ser monitorada.
 
 ## 8. Plano de execução
 
