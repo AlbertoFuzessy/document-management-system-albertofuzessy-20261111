@@ -47,8 +47,8 @@ A primeira versão é de usuário local único, sem autenticação. O backend ob
 | RNF-01 | Os arquivos são gravados exclusivamente no filesystem local em `backend/storage`, por meio de Multer `diskStorage`. Não usar armazenamento externo. |
 | RNF-02 | Os metadados são mantidos em memória nesta fase; reiniciar o processo remove o catálogo, embora os arquivos existentes possam permanecer no diretório local. |
 | RNF-03 | Configurações operacionais são obtidas por variáveis de ambiente, seguindo o princípio 12-Factor. |
-| RNF-04 | O limite máximo do arquivo é configurado por `UPLOAD_MAX_SIZE_BYTES`; a implementação deve definir e documentar um valor padrão antes de entrar em execução. |
-| RNF-05 | Tipos MIME aceitos podem ser limitados por `UPLOAD_ALLOWED_MIME_TYPES`, uma lista separada por vírgulas. A política e os valores padrão devem ser decididos antes da implementação; a validação de MIME não substitui medidas de segurança no consumo dos arquivos. |
+| RNF-04 | O limite máximo do arquivo é configurado por `UPLOAD_MAX_SIZE_BYTES`, com padrão de 10 MiB (10.485.760 bytes). |
+| RNF-05 | Tipos MIME podem ser limitados por `UPLOAD_ALLOWED_MIME_TYPES`, uma lista separada por vírgulas. Sem configuração, nenhum filtro MIME é aplicado; a validação de MIME não substitui medidas de segurança no consumo dos arquivos. |
 | RNF-06 | A aplicação deve garantir a existência do diretório de armazenamento na inicialização ou tratar claramente sua indisponibilidade, sem iniciar upload com configuração inválida. |
 | RNF-07 | Caminhos locais, nomes internos, stack traces e detalhes do sistema de arquivos não são expostos em respostas HTTP. |
 | RNF-08 | A API retorna respostas JSON consistentes para erros e usa códigos HTTP compatíveis com o resultado da operação. |
@@ -61,8 +61,8 @@ A primeira versão é de usuário local único, sem autenticação. O backend ob
 | `PORT` | Porta HTTP do backend | Usar o valor configurado; definir um padrão no ambiente de desenvolvimento. |
 | `STORAGE_DIR` | Diretório local de arquivos | Padrão `backend/storage`; não aceitar destino de armazenamento externo. |
 | `DMS_OWNER_ID` | Identificador local do dono | Padrão `local-user`; não representa uma credencial. |
-| `UPLOAD_MAX_SIZE_BYTES` | Tamanho máximo por arquivo | Obrigatória para a política de produção ou fornecer padrão explicitamente documentado. |
-| `UPLOAD_ALLOWED_MIME_TYPES` | Lista opcional de MIME types permitidos | Configuração separada por vírgulas; comportamento sem valor deve ser definido antes da implementação. |
+| `UPLOAD_MAX_SIZE_BYTES` | Tamanho máximo por arquivo | Padrão `10485760` (10 MiB); deve ser um inteiro positivo. |
+| `UPLOAD_ALLOWED_MIME_TYPES` | Lista opcional de MIME types permitidos | Configuração separada por vírgulas; vazia ou ausente permite qualquer tipo MIME. |
 
 ## 5. Modelo de dados
 
