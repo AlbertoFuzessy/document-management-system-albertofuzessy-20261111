@@ -1,20 +1,73 @@
-// Seed do componente raiz do Document Management System.
-//
-// Este é apenas um ponto de partida mínimo. Durante o Passo 3 você vai usar o
-// Agent Mode do GitHub Copilot para construir os componentes:
-//   - components/UploadComponent
-//   - components/DocumentList
-//   - components/DownloadButton
-// e o serviço services/ que consome a API do backend via fetch.
+import { useEffect, useState } from 'react';
+import DocumentList from './components/DocumentList.jsx';
+import UploadComponent from './components/UploadComponent.jsx';
+import { getDocuments, uploadDocument } from './services/documentsApi.js';
+import './App.css';
 
 export default function App() {
+  const [documents, setDocuments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [listError, setListError] = useState('');
+  const [reloadId, setReloadId] = useState(0);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    setIsLoading(true);
+    setListError('');
+    getDocuments()
+      .then((items) => {
+        if (isCurrent) setDocuments(items);
+      })
+      .catch((error) => {
+        if (isCurrent) setListError(error.message);
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [reloadId]);
+
+  async function handleUpload(file) {
+    const document = await uploadDocument(file);
+    setDocuments((currentDocuments) => [
+      document,
+      ...currentDocuments.filter((item) => item.id !== document.id),
+    ]);
+  }
+
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem' }}>
-      <h1>Document Management System</h1>
-      <p>
-        Seed do frontend. Construa a interface durante o Passo 3 usando o Agent
-        Mode do GitHub Copilot.
-      </p>
-    </main>
+    <div className="app-shell">
+      <header className="topbar">
+        <a className="brand" href="/" aria-label="Document Management System, início">
+          <span className="brand-mark" aria-hidden="true">DM</span>
+          <span className="brand-name">Document Management System</span>
+        </a>
+        <span className="topbar-meta">Arquivo digital</span>
+      </header>
+
+      <main className="workspace">
+        <div className="page-heading">
+          <div>
+            <div className="eyebrow">GESTÃO DE DOCUMENTOS / 2026</div>
+            <h1>Seus arquivos.</h1>
+          </div>
+          <span className="heading-index" aria-hidden="true">DMS — 01</span>
+        </div>
+
+        <div className="content-grid">
+          <UploadComponent onUpload={handleUpload} />
+          <DocumentList
+            documents={documents}
+            isLoading={isLoading}
+            error={listError}
+            onRetry={() => setReloadId((currentId) => currentId + 1)}
+          />
+        </div>
+      </main>
+    </div>
   );
 }
