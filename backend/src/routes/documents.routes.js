@@ -1,30 +1,17 @@
 const fs = require('node:fs');
-const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const express = require('express');
 const multer = require('multer');
+const documentsConfig = require('../config/documents.config');
 const documentsController = require('../controllers/documents.controller');
 
 const router = express.Router();
-const storageDir = path.resolve(
-  process.env.STORAGE_DIR || path.resolve(__dirname, '../../storage')
-);
-const configuredMaxSize = Number(process.env.UPLOAD_MAX_SIZE_BYTES || 10 * 1024 * 1024);
-
-if (!Number.isSafeInteger(configuredMaxSize) || configuredMaxSize <= 0) {
-  throw new Error('UPLOAD_MAX_SIZE_BYTES deve ser um inteiro positivo.');
-}
-
-const allowedMimeTypes = (process.env.UPLOAD_ALLOWED_MIME_TYPES || '')
-  .split(',')
-  .map((mimeType) => mimeType.trim())
-  .filter(Boolean);
 
 const upload = multer({
   storage: multer.diskStorage({
     destination(req, file, callback) {
-      fs.mkdir(storageDir, { recursive: true }, (error) => {
-        callback(error, storageDir);
+      fs.mkdir(documentsConfig.storageDir, { recursive: true }, (error) => {
+        callback(error, documentsConfig.storageDir);
       });
     },
     filename(req, file, callback) {
@@ -33,10 +20,15 @@ const upload = multer({
   }),
   limits: {
     files: 1,
-    fileSize: configuredMaxSize,
+    fileSize: documentsConfig.maxUploadSizeBytes,
+    fields: 0,
+    fieldNameSize: 100,
+    fieldSize: 1024,
+    headerPairs: 100,
   },
   fileFilter(req, file, callback) {
-    if (allowedMimeTypes.length && !allowedMimeTypes.includes(file.mimetype)) {
+    if (documentsConfig.allowedMimeTypes.length
+      && !documentsConfig.allowedMimeTypes.includes(file.mimetype)) {
       const error = new Error('Tipo de arquivo não permitido.');
       error.code = 'FILE_TYPE_NOT_ALLOWED';
       return callback(error);
@@ -59,7 +51,7 @@ router.use((error, req, res, next) => {
 
   if (error instanceof multer.MulterError) {
     const tooLarge = error.code === 'LIMIT_FILE_SIZE';
-    const tooManyFiles = error.code === 'LIMIT_FILE_COUNT';
+    const tooManyFiles = ['LIMIT_FILE_COUNT', 'LIMIT_UNEXPECTED_FILE'].includes(error.code);
 
     return res.status(tooLarge ? 413 : 400).json({
       error: {
@@ -73,6 +65,15 @@ router.use((error, req, res, next) => {
 
   if (error.code === 'FILE_TYPE_NOT_ALLOWED') {
     return res.status(400).json({
+      error: {
+        code: error.code,
+        message: error.message,
+      },
+    });
+  }
+
+  if (error.code === 'STORAGE_QUOTA_EXCEEDED' || error.code === 'DOCUMENT_LIMIT_EXCEEDED') {
+    return res.status(413).json({
       error: {
         code: error.code,
         message: error.message,

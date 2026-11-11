@@ -11,32 +11,34 @@ export default function App() {
   const [reloadId, setReloadId] = useState(0);
 
   useEffect(() => {
-    let isCurrent = true;
+    const controller = new AbortController();
 
     setIsLoading(true);
     setListError('');
-    getDocuments()
+    getDocuments({ signal: controller.signal })
       .then((items) => {
-        if (isCurrent) setDocuments(items);
+        setDocuments(items);
       })
       .catch((error) => {
-        if (isCurrent) setListError(error.message);
+        if (error.name !== 'AbortError') setListError(error.message);
       })
       .finally(() => {
-        if (isCurrent) setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       });
 
     return () => {
-      isCurrent = false;
+      controller.abort();
     };
   }, [reloadId]);
 
   async function handleUpload(file) {
     const document = await uploadDocument(file);
+    setListError('');
     setDocuments((currentDocuments) => [
       document,
       ...currentDocuments.filter((item) => item.id !== document.id),
     ]);
+    setReloadId((currentId) => currentId + 1);
   }
 
   return (

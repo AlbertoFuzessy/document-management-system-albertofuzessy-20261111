@@ -34,6 +34,7 @@ async function download(req, res, next) {
     });
   }
 
+  res.type('application/octet-stream');
   return res.download(result.filePath, result.document.originalName, (error) => {
     if (error) {
       return next(error);
