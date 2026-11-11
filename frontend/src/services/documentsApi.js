@@ -5,7 +5,11 @@ async function request(path, options) {
 
   try {
     response = await fetch(`${API_PREFIX}${path}`, options);
-  } catch {
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw error;
+    }
+
     throw new Error('Não foi possível conectar ao servidor.');
   }
 
@@ -25,8 +29,8 @@ async function request(path, options) {
   return response;
 }
 
-export async function getDocuments() {
-  const response = await request('/documents');
+export async function getDocuments(options = {}) {
+  const response = await request('/documents', options);
   const payload = await response.json();
   return payload.documents;
 }

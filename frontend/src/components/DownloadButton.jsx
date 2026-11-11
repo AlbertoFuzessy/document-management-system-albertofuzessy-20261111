@@ -15,8 +15,10 @@ export default function DownloadButton({ documentId }) {
       const link = window.document.createElement('a');
       link.href = objectUrl;
       link.download = fileName;
+      window.document.body.appendChild(link);
       link.click();
-      URL.revokeObjectURL(objectUrl);
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     } catch (downloadError) {
       setError(downloadError.message);
     } finally {

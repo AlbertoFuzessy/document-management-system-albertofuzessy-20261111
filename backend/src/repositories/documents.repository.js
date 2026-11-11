@@ -1,9 +1,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const documentsConfig = require('../config/documents.config');
 
-const storageDir = path.resolve(
-  process.env.STORAGE_DIR || path.resolve(__dirname, '../../storage')
-);
 const documents = new Map();
 
 function toPublicDocument(document) {
@@ -16,7 +14,7 @@ function getStoredFilePath(storageName) {
     throw new Error('Nome interno de armazenamento inválido.');
   }
 
-  return path.join(storageDir, storageName);
+  return path.join(documentsConfig.storageDir, storageName);
 }
 
 function create(document) {
@@ -29,6 +27,14 @@ function listByOwner(owner) {
     .filter((document) => document.owner === owner)
     .sort((first, second) => second.uploadedAt.localeCompare(first.uploadedAt))
     .map(toPublicDocument);
+}
+
+function getOwnerUsage(owner) {
+  const ownedDocuments = [...documents.values()].filter((document) => document.owner === owner);
+  return {
+    documentCount: ownedDocuments.length,
+    totalBytes: ownedDocuments.reduce((total, document) => total + document.size, 0),
+  };
 }
 
 async function findDownloadByIdAndOwner(id, owner) {
@@ -56,6 +62,7 @@ async function removeStoredFile(storageName) {
 module.exports = {
   create,
   findDownloadByIdAndOwner,
+  getOwnerUsage,
   listByOwner,
   removeStoredFile,
 };
